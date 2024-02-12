@@ -10,9 +10,10 @@ Additionally, you need the following hardware:<br>
 ## Installation
 This script can be executed manually (type "python3 dws7612.py -h" for help) but it is designed to run as a service.
 
-If you whish to have the script logging your meter data into a MySQL database you need to setup the database and modify the configuration file accordingly.
-To setup the database, you can just import the file dws7612.sql into your MySQL environment using a 'phpMyAdmin' or similar. If you want the data to be stored
-in a database with a different structur, you have to modify the funktion '_log_data' accordingly.
+If you want the software to log your meter data into a <b>MySQL</b> database you need to setup the database and modify the configuration file accordingly.
+To setup the database, you can just import the file <i><b>dws7612.sql</b></i> into your MySQL environment using e.g. 'phpMyAdmin' or similar.
+
+If you want the data to be stored in a database with a different structure, you have to modify the funktion '_log_data' accordingly.
 
 To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:
 
