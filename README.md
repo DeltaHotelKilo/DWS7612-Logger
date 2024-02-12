@@ -15,5 +15,7 @@ This script can be executed manually (type "python3 dws7612.py -h" for help) but
 To install the software complete the following steps:
 
     sudo mkdir /usr/local/bin/dws7612
+    sudo cp ./dws7612.py /usr/local/bin/dws7612
+    sudo cp ./dws7612.cfg /usr/local/bin/dws7612
 
 
