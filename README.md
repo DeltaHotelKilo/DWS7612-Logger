@@ -21,7 +21,7 @@ create a working directory and copy the corresponding files:
     sudo cp ./dws7612.py /usr/local/bin/dws7612
     sudo cp ./dws7612.cfg /usr/local/bin/dws7612
 
-If you want to install the software into a different directory as stated above, you need to modifiy the service-file (dws7612.service) accordingly.
+If you want to install the software into a different directory as tho one stated above, you need to modifiy the service-file (dws7612.service) accordingly.
 
 setup the service:
 
