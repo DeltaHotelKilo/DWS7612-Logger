@@ -8,12 +8,12 @@ Additionally, you need the following hardware:<br>
 - [IR Smart-Meter-Interface](https://wiki.volkszaehler.org/hardware/controllers/ir-schreib-lesekopf-usb-ausgang) (as an example)
 
 ## Installation
-This script can be executed manually (type "python3 dws7612.py -h" for help) but it is designed to run as a service.
+This script can be executed manually (type: `python3 dws7612.py -h` for help), but it is designed to run as a service.
 
-If you want the software to log your meter data into a <b>MySQL</b> database you need to setup the database and modify the configuration file accordingly.
-To setup the database, you can just import the file <i><b>dws7612.sql</b></i> into your MySQL environment using e.g. 'phpMyAdmin' or similar.
+If you want the software to log your meter data into a <b>MySQL</b> database you have to setup the database and modify the configuration file accordingly.
+To setup the database, you can just import the file `dws7612.sql` into your MySQL environment using e.g. 'phpMyAdmin' or similar.
 
-If you want the data to be stored in a database with a different structure, you have to modify the funktion '_log_data' accordingly.
+If you want the data to be stored in a database with a different structure, you have to modify the function `_log_data` accordingly.
 
 To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:
 
@@ -27,7 +27,7 @@ create a working directory and copy the corresponding files:
     sudo cp ./dws7612.py /usr/local/bin/dws7612
     sudo cp ./dws7612.cfg /usr/local/bin/dws7612
 
-If you want to install the software into a different directory as tho one stated above, you need to modifiy the service-file (dws7612.service) accordingly.
+If you want to install the software into a different directory as the one stated above, you have to modify the service file (`dws7612.service`) accordingly.
 
 setup the service:
 
