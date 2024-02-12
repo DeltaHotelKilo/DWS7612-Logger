@@ -30,11 +30,12 @@ setup the service:
     sudo systemctl enable dws7612.service
     sudo systemctl start dws7612.service
 
-check the serivce is running:    
+check the serivce is running:
 
     sudo systemctl status dws7612.service
 
-    # the output should look somehow like this    
+the output should look somehow like this:
+
     pi@meterpi:~/pi/dws7612 $ sudo systemctl status dws7612.service
     * dws7612.service - DWS7612 - Electrical Meter Logger
        Loaded: loaded (/etc/systemd/system/dws7612.service; enabled; vendor preset: enabled)
