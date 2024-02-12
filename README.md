@@ -12,4 +12,7 @@ Installation
 ------------
 This script can be executed manually (type "python3 dws7612.py -h" for help) but is designed to run as a service.
 
+To install the software complete the following steps:
+    sudo mkdir /usr/local/bin/dws7612
+
 
