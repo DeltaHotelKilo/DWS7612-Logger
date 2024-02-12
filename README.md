@@ -10,4 +10,6 @@ Additionally, you need the following hardware:<br>
 
 Installation
 ------------
-This script can be executed manually (type "python3 dws7612.py -h" for help) but is mainly designed to run as a service.
+This script can be executed manually (type "python3 dws7612.py -h" for help) but is designed to run as a service.
+
+
