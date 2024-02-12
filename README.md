@@ -12,11 +12,10 @@ Installation
 ------------
 This script can be executed manually (type "python3 dws7612.py -h" for help) but is designed to run as a service.
 
-To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:
-
-# edit the configuration file (see comments in the file)
+To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:<br>
+edit the configuration file (see comments in the file)
     nano ./dws7612.cfg    
-# create a working directory and copy the corresponding files:    
+create a working directory and copy the corresponding files:    
     sudo mkdir /usr/local/bin/dws7612
     sudo cp ./dws7612.py /usr/local/bin/dws7612
     sudo cp ./dws7612.cfg /usr/local/bin/dws7612
