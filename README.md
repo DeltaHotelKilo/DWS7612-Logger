@@ -28,5 +28,21 @@ To install the software on e.g. a Raspberry Pi copy the repository to a local di
     # check the serivce is running:
     sudo systemctl status dws7612.service
 
-    # 
+    # the output should look somewhat like this
+    pi@meterpi:~/scripts/dws7612 $ sudo systemctl status dws7612.service
+    * dws7612.service - DWS7612 - Electrical Meter Logger
+       Loaded: loaded (/etc/systemd/system/dws7612.service; enabled; vendor preset: enabled)
+       Active: active (running) since Mon 2024-02-12 15:19:05 CET; 3h 38min ago
+     Main PID: 23008 (dws7612.py)
+        Tasks: 2 (limit: 1595)
+          CPU: 1min 14.923s
+       CGroup: /system.slice/dws7612.service
+               └─23008 /usr/bin/python3 -u /usr/local/bin/dws7612/dws7612.py
+
+    Feb 12 15:19:06 meterpi dws7612.py[23008]: Copyright (©) 2024, Holger Kupke, License: GNU GPLv3
+    Feb 12 15:19:06 meterpi dws7612.py[23008]: Config:  /usr/local/bin/dws7612/dws7612.cfg
+    Feb 12 15:19:06 meterpi dws7612.py[23008]: Device:  /dev/ttyUSB0
+    Feb 12 15:19:06 meterpi dws7612.py[23008]: Cycle:   60
+    Feb 12 15:19:06 meterpi dws7612.py[23008]: Logging: enabled
+
 
