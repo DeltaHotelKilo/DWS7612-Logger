@@ -8,8 +8,7 @@ Additionally, you need the following hardware:<br>
 - [IR Smart-Meter-Interface](https://wiki.volkszaehler.org/hardware/controllers/ir-schreib-lesekopf-usb-ausgang) (as an example)
 
 ## Installation
-This script can be executed manually (type "python3 dws7612.py -h" for help) but is designed to run as a service.
-
+This script can be executed manually (type "python3 dws7612.py -h" for help) but is designed to run as a service.<br>
 To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:
 
 edit the configuration file (see comments in the file):
