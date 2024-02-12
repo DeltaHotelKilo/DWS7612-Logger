@@ -1,0 +1,13 @@
+[Unit]
+Description=DWS7612 - Electrical Meter Logger
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/dws7612/dws7612.py
+ExecReload=/bin/kill -HUP $MAINPID
+KillMode=process
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+
