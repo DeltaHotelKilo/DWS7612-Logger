@@ -8,10 +8,10 @@ Additionally, you need the following hardware:<br>
 - [IR Smart-Meter-Interface](https://wiki.volkszaehler.org/hardware/controllers/ir-schreib-lesekopf-usb-ausgang) (or similar)
 
 ## Installation
-This script can be executed manually (type: `python3 dws7612.py -h` for help), but it is designed to run as a service.
+The script can be executed manually (type: `python3 dws7612.py -h` for help), but it is designed to run as a service.
 
 If you want the software to log your meter data into a <b>MySQL</b> database you have to setup the database and modify the configuration file accordingly.
-To setup the database, you can just import the file `dws7612.sql` into your MySQL environment using e.g. 'phpMyAdmin' or similar.
+To setup the database, you can just import the file `dws7612.sql` into your MySQL environment using e.g. 'phpMyAdmin', or similar.
 
 If you want the data to be stored in a database with a different structure, you have to modify the function `_log_data` accordingly.
 
