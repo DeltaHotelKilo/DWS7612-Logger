@@ -3,6 +3,7 @@ Reads and decodes SML messages of a DWS7612 electric meter. Optionally, stores t
 
 Hard- and Software Requirements
 -------------------------------
-The script was tested on a Raspberry Pi 3 B+ with Debian Bullseye and Python 3.5 installed. You also need an optical smart meter interface with a USB connector.<br>
+The script was tested on a Raspberry Pi 3 B+ with Debian Bullseye and Python 3.5 installed.<br>
+You need an optical smart meter interface with e.g. a USB connector.<br>
 - [IR Smart-Meter-Interface](https://wiki.volkszaehler.org/hardware/controllers/ir-schreib-lesekopf-usb-ausgang)
 
