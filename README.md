@@ -8,14 +8,14 @@ Additionally, you need the following hardware:<br>
 - [DWS7612 Smart Meter](https://www.dzg.de/produkte/moderne-messeinrichtung#dvs76)
 - [IR Smart-Meter-Interface](https://wiki.volkszaehler.org/hardware/controllers/ir-schreib-lesekopf-usb-ausgang) (as an example)
 
-Installation
-------------
+# Installation
+--------------
 This script can be executed manually (type "python3 dws7612.py -h" for help) but is designed to run as a service.
 
-## To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:
+To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:
 
-edit the configuration file (see comments in the file):
-    nano ./dws7612.cfg    
+## edit the configuration file (see comments in the file):
+     nano ./dws7612.cfg    
 
 ## create a working directory and copy the corresponding files:    
     sudo mkdir /usr/local/bin/dws7612
