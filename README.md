@@ -1,2 +1,2 @@
 # DWS7612-Logger
-A data logger for the DWS7612 electic meter
+A data logger for the DWS7612 electic meter.
