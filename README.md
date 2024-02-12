@@ -12,24 +12,28 @@ This script can be executed manually (type "python3 dws7612.py -h" for help) but
 
 To install the software on e.g. a Raspberry Pi copy the repository to a local directory and complete the following steps:
 
-##### edit the configuration file (see comments in the file):
+edit the configuration file (see comments in the file):
+
     nano ./dws7612.cfg    
 
-##### create a working directory and copy the corresponding files:    
+create a working directory and copy the corresponding files:
+
     sudo mkdir /usr/local/bin/dws7612
     sudo cp ./dws7612.py /usr/local/bin/dws7612
     sudo cp ./dws7612.cfg /usr/local/bin/dws7612
 
-#### set up the service:
+set up the service:
+
     sudo cp ./dws7612.service /etc/systemd/system
     sudo systemctl daemon-reload
     sudo systemctl enable dws7612.service
     sudo systemctl start dws7612.service
 
-#### check the serivce is running:    
+check the serivce is running:    
+
     sudo systemctl status dws7612.service
     
-#### the output should look somewhat like this    
+    # the output should look somewhat like this    
     pi@meterpi:~/pi/dws7612 $ sudo systemctl status dws7612.service
     * dws7612.service - DWS7612 - Electrical Meter Logger
        Loaded: loaded (/etc/systemd/system/dws7612.service; enabled; vendor preset: enabled)
