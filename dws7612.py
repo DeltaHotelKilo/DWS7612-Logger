@@ -153,18 +153,6 @@ class DWS7612Logger(threading.Thread):
       except (pymysql.Error) as e:
         print('MySQL Error: %s\n' % e)
 
-  def _get_octet_string(buffer, offset):
-    result = None
-    if (len(buffer)-offset) < 2:
-      pass
-    elif (buffer[offset] & 0xF0) == 0x00: # octet string up to 15 bytes
-      size = (buffer[offset] & 0x0F) # size including the 1-byte tag
-      if (len(buffer)-offset) >= size:
-        result = buffer[offset+1:offset+size]
-    elif (buffer[offset] & 0xF0) == 0x80: # larger octet string
-      pass # not yet handled
-    return result
-
   def _get_int(self, buffer, offset):
     result = None
     if (len(buffer)-offset) < 2:
