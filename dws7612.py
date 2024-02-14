@@ -65,6 +65,7 @@ import serial
 import signal
 import argparse
 import threading
+import subprocess
 import configparser
 
 from time import sleep, time_ns
@@ -276,8 +277,9 @@ class DWS7612Logger(threading.Thread):
 class cfg:
   #section [General]
   cycle=''               #read cycle in seconds - default: 60
-  #section [DWS7612]
-  device=''              #USB device - default: /dev/ttyUSB0
+  #section [Meter]
+  dport=''               #device port - default: /dev/ttyUSB0
+  dname=''               #device name
   #section [MySQL]
   mysql_host=''          #host name or ip address
   mysql_user=''          #user name
@@ -310,7 +312,8 @@ def read_cfg(nosql=False):
   if cfg.cycle < 2:
     cfg.cycle = 60
 
-  cfg.device = parser.get('Meter', 'device', fallback='/dev/ttyUSB0')
+  cfg.dport = parser.get('Meter', 'port', fallback='/dev/ttyUSB0')
+  cfg.dname = parser.get('Meter', 'name', fallback='')
 
   global mysql_logging
   mysql_logging = False
@@ -326,6 +329,23 @@ def read_cfg(nosql=False):
        len(cfg.mysql_pwd) and \
        len(cfg.mysql_db):
       mysql_logging = True;
+
+def get_port(device_name):
+  port = ''
+  command = 'dmesg | grep -i "' + device_name + '"'
+
+  try:
+    result = subprocess.check_output(command, shell=True, text=True)
+    x = result.find('tty')
+    if x:
+      port='/dev/' + result[x:]
+      x = port.find(' ')
+      if x:
+        port = port[:x]
+  except Exception as ex:
+    print(str(ex))
+
+  return port
 
 ################################# main ##################################
 
@@ -355,8 +375,10 @@ def main():
     args.verbose = True
 
   read_cfg(args.nosql)
+  if len(cfg.dname):
+    cfg.dport = get_port(cfg.dname)
 
-  print('Device:  ' + cfg.device)
+  print('Device:  ' + cfg.dport)
   print('Cycle:   ' + str(cfg.cycle))
   if args.nosql:
     print('Logging: \033[1;31mdisabled\033[0m\n')
@@ -364,9 +386,9 @@ def main():
     print('Logging: \033[1;32menabled\033[0m\n')
 
   if mysql_logging:
-    logger = DWS7612Logger(cfg.device, cfg.cycle, cfg.mysql_host, cfg.mysql_user, cfg.mysql_pwd, cfg.mysql_db, args.verbose)
+    logger = DWS7612Logger(cfg.dport, cfg.cycle, cfg.mysql_host, cfg.mysql_user, cfg.mysql_pwd, cfg.mysql_db, args.verbose)
   else:
-    logger = DWS7612Logger(cfg.device, cfg.cycle, verbose=args.verbose)
+    logger = DWS7612Logger(cfg.dport, cfg.cycle, verbose=args.verbose)
   logger.start()
 
   if args.once:
