@@ -27,7 +27,7 @@
    negative active energy (2.8.0) in a MySQL database.
 
    Usage example:
-     python3 dws7612.py [-v] [-n] [--nosql]
+     python3 dws7612.py [-1] [-v] [-n] [--nosql]
 
    Design goals:
     * Simplicity: no full SML decoder - DWS7612.2 specific format
@@ -39,11 +39,11 @@
    References and remarks:
     * Helmut Schmidt (https://github.com/huirad).
       His scripts helped a lot decoding the SML messages and parts
-      of this script have been derived by his ED300L-script.
+      of this script have been derived from his ED300L-script.
 
     * Klaus J. Mueller (https://volkszaehler.org)
       I am using the vz-software for a very long time. The database
-      structure and functionalty is still based on hiis software.
+      structure and functionalty is still based on his software.
 """
 
 __author__    = 'Holger Kupke'
@@ -188,21 +188,30 @@ class DWS7612Logger(threading.Thread):
     start_seq = b'\x1b\x1b\x1b\x1b\x01\x01\x01\x01'
     stop_seq  = b'\x1b\x1b\x1b\x1b\x1a'
 
-    msg = None
+    msg = b''
+    data = b''
 
     while True:
+      # try reading until stop sequence
       data = ser.read_until(stop_seq)
-      data += ser.read(3)
-      start_idx = data.find(start_seq)
-      if start_idx >= 0:
+      if len(data) == 0:
         break
 
-      data = b''
-      continue
+      # read 3 more bytes (filler and crc)
+      data += ser.read(3)
 
-    stop_idx = data.find(stop_seq, start_idx)
-    if stop_idx > start_idx:
-      msg = data[start_idx :(stop_idx + len(stop_seq) + 3)]
+      # do again, if there is no start sequence
+      start_idx = data.find(start_seq)
+      if start_idx < 0:
+        continue
+
+      # check if there is a stop sequence
+      stop_idx = data.find(stop_seq, start_idx)
+      if stop_idx > start_idx:
+        # the buffer contains both sequences
+        # in the right order
+        msg = data[start_idx :(stop_idx + len(stop_seq) + 3)]
+        break
 
     return msg
 

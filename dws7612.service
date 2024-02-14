@@ -1,6 +1,6 @@
 [Unit]
 Description=DWS7612 - Electrical Meter Logger
-After=network.target
+After=network.target mysql.service
 
 [Service]
 ExecStart=/usr/local/bin/dws7612/dws7612.py
