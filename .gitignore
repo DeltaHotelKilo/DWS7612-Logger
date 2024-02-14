@@ -4,5 +4,7 @@
 # ignore all .cfg files
 *.cfg
 
+# ignore update script
+update.sh
 
 
