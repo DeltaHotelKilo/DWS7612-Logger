@@ -182,7 +182,10 @@ class DWS7612Logger(threading.Thread):
     while True:
       # try reading until stop sequence
       data = ser.read_until(stop_seq)
-      if len(data) == 0:
+
+      # reading failed, when there is no stop sequence
+      stop_idx = data.find(stop_seq)
+      if stop_idx < 0:
         break
 
       # read 3 more bytes (filler and crc)
@@ -193,11 +196,8 @@ class DWS7612Logger(threading.Thread):
       if start_idx < 0:
         continue
 
-      # check if there is a stop sequence
-      stop_idx = data.find(stop_seq, start_idx)
+      # stop sequence must be after start sequence
       if stop_idx > start_idx:
-        # the buffer contains both sequences
-        # in the right order
         msg = data[start_idx :(stop_idx + len(stop_seq) + 3)]
         break
 
