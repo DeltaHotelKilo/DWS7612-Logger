@@ -3,10 +3,12 @@ Description=DWS7612 - Electrical Meter Logger
 After=network.target mysql.service
 
 [Service]
-ExecStart=/usr/local/bin/dws7612/dws7612.py
+ExecStart=/home/pi/scripts/dws7612/dws7612.py
+WorkingDirectory=/home/pi/scripts/dws7612/
 ExecReload=/bin/kill -HUP $MAINPID
 KillMode=process
 Restart=on-failure
+User=pi
 
 [Install]
 WantedBy=multi-user.target

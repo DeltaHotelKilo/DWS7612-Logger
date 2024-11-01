@@ -48,7 +48,7 @@
 
 __author__    = 'Holger Kupke'
 __copyright__ = 'Copyright (\xa9) 2024, Holger Kupke, License: GNU GPLv3'
-__version__   = '1.0.0'
+__version__   = '1.0.1'
 __license__   = 'GNU General Public License 3'
 
 #########################################################################
@@ -56,6 +56,7 @@ __license__   = 'GNU General Public License 3'
 # Module-History
 #  Date         Author            Reason
 #  10-Feb-2024  Holger Kupke      v1.0.0 Initial version
+#  01-Nov-2024  Holger Kupke      v1.0.1 added  MQTT publishing
 #
 #########################################################################
 
@@ -63,18 +64,18 @@ import os
 import sys
 import serial
 import signal
+import pymysql
 import argparse
 import threading
 import subprocess
 import configparser
 
 from time import sleep, time_ns
-
-import pymysql
+import paho.mqtt.client as mqtt_client
 
 ########################### class definitions ###########################
 
-class DWS7612Logger(threading.Thread):
+class SimpleDWS7612Logger(threading.Thread):
   # Obis IDs
   _OID_180 = b'\x07\x01\x00\x01\x08\x00\xff' #Positive Active Energy
   _OID_280 = b'\x07\x01\x00\x02\x08\x00\xff' #Negative Active Energy
@@ -113,22 +114,19 @@ class DWS7612Logger(threading.Thread):
 
   # public functions
   def get_positive(self):
-    v = None
     for x in range(10):
       if self._running:
         break
       sleep(1)
 
-    v = self._positive
-    return v
+    return self._positive
 
   def get_negative(self):
-    v = None
     for x in range(10):
       if self._running:
         break
       sleep(1)
-    return v
+    return self._negative
 
   def stop(self):
     self._run = False
@@ -146,13 +144,15 @@ class DWS7612Logger(threading.Thread):
         with conn:
           with conn.cursor() as cursor:
             ts = int(time_ns()/1000000)
-            sql = "INSERT INTO `data` (`entity_id`, `time`, `value`) VALUES (%s, %s, %s)"
-            cursor.execute(sql, ('2', str(ts), self._positive))
-            sql = "INSERT INTO `data` (`entity_id`, `time`, `value`) VALUES (%s, %s, %s)"
-            cursor.execute(sql, ('3', str(ts), self._negative))
+            sql = "INSERT INTO `data` (`channel_id`, `timestamp`, `value`) VALUES (%s, %s, %s)"
+            cursor.execute(sql, ('29', str(ts), self._positive))
+            sql = "INSERT INTO `data` (`channel_id`, `timestamp`, `value`) VALUES (%s, %s, %s)"
+            cursor.execute(sql, ('30', str(ts), self._negative))
             conn.commit()
-      except (pymysql.Error) as e:
+      except pymysql.Error as e:
         print('MySQL Error: %s\n' % e)
+      except Exception as e:
+        print('%s: %s' % (type(e), str(e.args)))
 
   def _get_int(self, buffer, offset):
     result = None
@@ -217,7 +217,7 @@ class DWS7612Logger(threading.Thread):
         if len(msg) and self._run:
           if self._verbose:
             print('Message length: %d' % len(msg))
-            print(msg.hex())
+            #print(msg.hex())
             print()
 
           # decode positive active energy (1.8.0)
@@ -276,15 +276,31 @@ class DWS7612Logger(threading.Thread):
 
 class cfg:
   #section [General]
-  cycle=''               #read cycle in seconds - default: 60
+  cycle=''          # read cycle in seconds - default: 60
   #section [Meter]
-  dport=''               #device port - default: /dev/ttyUSB0
-  dname=''               #device name
+  dport=''          # device port - default: /dev/ttyUSB0
+  dname=''          # device name
   #section [MySQL]
-  mysql_host=''          #host name or ip address
-  mysql_user=''          #user name
-  mysql_pwd=''           #user password
-  mysql_db=''            #database name
+  mysql_host=''     # host name or ip address
+  mysql_user=''     # user name
+  mysql_pwd=''      # user password
+  mysql_db=''       # database name
+  #section [MQTT]
+  mqtt_broker=''    # broker ip
+  mqtt_port=''      # broker port
+  mqtt_user=''      # username
+  mqtt_pwd=''       # passwort
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 ########################### global functions ############################
 
@@ -308,15 +324,13 @@ def read_cfg(nosql=False):
   parser = configparser.ConfigParser()
   parser.read(cfg_file)
 
+  global cfg
   cfg.cycle = parser.getint('General', 'cycle', fallback=60)
   if cfg.cycle < 2:
-    cfg.cycle = 60
+    cfg.cycle = 30
 
   cfg.dport = parser.get('Meter', 'port', fallback='/dev/ttyUSB0')
   cfg.dname = parser.get('Meter', 'name', fallback='')
-
-  global mysql_logging
-  mysql_logging = False
 
   if nosql == False:
     cfg.mysql_host = parser.get('MySQL', 'hostname', fallback='')
@@ -328,7 +342,13 @@ def read_cfg(nosql=False):
        len(cfg.mysql_user) and \
        len(cfg.mysql_pwd) and \
        len(cfg.mysql_db):
-      mysql_logging = True;
+       global mysql_logging
+       mysql_logging = True;
+
+  cfg.mqtt_broker = parser.get('MQTT', 'broker', fallback='')
+  cfg.mqtt_port = parser.getint('MQTT', 'port', fallback=1883)
+  cfg.mqtt_user = parser.get('MQTT', 'user', fallback='')
+  cfg.mqtt_pwd = parser.get('MQTT', 'pwd', fallback='')
 
 def get_port(device_name):
   port = ''
@@ -347,6 +367,29 @@ def get_port(device_name):
 
   return port
 
+def connect_mqtt():
+  def on_connect(client, userdata, flags, reason_code, properties):
+    if reason_code.is_failure:
+      print("Failed to connect, return code %d\n", reason_code)
+    else:
+      global mqtt_connected
+      mqtt_connected = True
+
+  client = mqtt_client.Client(mqtt_client.CallbackAPIVersion.VERSION2)
+  client.username_pw_set(cfg.mqtt_user, cfg.mqtt_pwd)
+  client.on_connect = on_connect
+  client.connect(cfg.mqtt_broker, cfg.mqtt_port)
+  return client
+
+########################### global variables ############################
+
+mqttc = None
+args = None
+dws = None
+
+mysql_logging = False
+mqtt_connected = False
+
 ################################# main ##################################
 
 def main():
@@ -355,61 +398,96 @@ def main():
   signal.signal(signal.SIGINT, signalHandler)
   signal.signal(signal.SIGTERM, signalHandler)
 
-  print('\033[1mDWS7612\033[0m - Electrical Meter Logger - v' + __version__)
-  print('----------------------------------------------------')
-  print(__copyright__ + '\n')
-
-  global logger
-  logger = None
-
-  global args
-  args = None
-
   parser = argparse.ArgumentParser()
   parser.add_argument('-1', '--once', action='store_true', help='Implies -v: Read the meter data just once and exit.')
   parser.add_argument('-v', '--verbose', action='store_true', help='Display runtime-information.')
-  parser.add_argument('-n', '--nosql', action='store_true', help='Disable mysql logging.')
+  parser.add_argument('-d', '--debug', action='store_true', help='Display debug information.')
+  parser.add_argument('-n', '--nosql', action='store_true', help='Disable database logging.')
+
+  global args
   args = parser.parse_args()
 
   if args.once:
     args.verbose = True
 
+  if args.debug:
+    args.verbose = True
+
+  if args.verbose:
+    print(f'{bcolors.BOLD}DWS7612{bcolors.ENDC} - Electrical Meter Logger - v' + __version__)
+    print('----------------------------------------------------')
+    print(__copyright__ + '\n')
+
   read_cfg(args.nosql)
   if len(cfg.dname):
     cfg.dport = get_port(cfg.dname)
 
-  print('Device:  ' + cfg.dport)
-  print('Cycle:   ' + str(cfg.cycle))
-  if args.nosql:
-    print('Logging: \033[1;31mdisabled\033[0m\n')
-  else:
-    print('Logging: \033[1;32menabled\033[0m\n')
+  if args.verbose:
+    print('Device:  ' + cfg.dport)
+    print('Cycle:   ' + str(cfg.cycle))
+    if args.nosql:
+      print(f'Logging: {bcolors.WARNING}disabled{bcolors.ENDC}\n')
+    else:
+      print(f'Logging: {bcolors.OKGREEN}enabled{bcolors.ENDC}\n')
 
+    print(f'Connecting to MQTT-Broker ({cfg.mqtt_broker})...', end='')
+
+  global mqttc
+  mqttc = connect_mqtt()
+  mqttc.loop_start()
+  for i in range(100):
+    if mqtt_connected:
+      break
+    sleep(0.1)
+  if args.verbose:
+    if mqtt_connected:
+      print(f"{bcolors.OKGREEN}success{bcolors.ENDC}.\n")
+    else:
+      print(f"{bcolors.FAIL}failed{bcolors.ENDC}.\n")
+
+  global dws
   if mysql_logging:
-    logger = DWS7612Logger(cfg.dport, cfg.cycle, cfg.mysql_host, cfg.mysql_user, cfg.mysql_pwd, cfg.mysql_db, args.verbose)
+    dws = SimpleDWS7612Logger(cfg.dport, cfg.cycle, cfg.mysql_host, cfg.mysql_user, cfg.mysql_pwd, cfg.mysql_db, args.verbose)
   else:
-    logger = DWS7612Logger(cfg.dport, cfg.cycle, verbose=args.verbose)
-  logger.start()
+    dws = SimpleDWS7612Logger(cfg.dport, cfg.cycle, verbose=args.verbose)
+  dws.start()
 
   if args.once:
-    logger.get_positive()
+    dws.get_positive()
   else:
     while True:
-      sleep(int(cfg.cycle))
+      r = mqttc.publish('meter/power/consumption', str(dws.get_positive()))
+      if args.debug:
+        print(f'Bezug:       {str(r[0])} - {str(r[1])}')
+      r = mqttc.publish('meter/power/feed', str(dws.get_negative()))
+      if args.debug:
+        print(f'Einspeisung: {str(r[0])} - {str(r[1])}\n')
+      sleep(cfg.cycle + 1)
+
+  mqttc.loop_stop()
+  mqttc.disconnect()
 
 if __name__ == '__main__':
   try:
     assert_python3()
     main()
   finally:
-    if logger != None:
+    if mqttc:
       if args.verbose:
-        print("Stopping logger thread...", end="")
+        print("Disconnecting from MQTT-Broker...", end="")
+      mqttc.loop_stop()
+      mqttc.disconnect()
+      if args.verbose:
+        print(f"{bcolors.OKGREEN}done{bcolors.ENDC}.")
 
-      logger.stop()
-      logger.join()
+    if dws != None:
+      if args.verbose:
+        print("Stopping SimpleDWS7612Logger...", end="")
+
+      dws.stop()
+      dws.join()
 
       if args.verbose:
-        print("\033[0;32mdone\033[0m.")
+        print(f"{bcolors.OKGREEN}done{bcolors.ENDC}.")
 
     print('Bye.')
