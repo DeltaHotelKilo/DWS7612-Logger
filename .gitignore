@@ -1,10 +1,5 @@
 # ignore all .bak files
 *.bak
 
-# ignore all .cfg files
-*.cfg
-
-# ignore update script
-update.sh
 
 
