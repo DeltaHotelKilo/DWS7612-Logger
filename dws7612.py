@@ -47,8 +47,8 @@
 """
 
 __author__    = 'Holger Kupke'
-__copyright__ = 'Copyright (\xa9) 2024, Holger Kupke, License: GNU GPLv3'
-__version__   = '1.0.1'
+__copyright__ = 'Copyright (\xa9) 2024, Holger Kupke. GNU Public License 3'
+__version__   = '1.0.2'
 __license__   = 'GNU General Public License 3'
 
 #########################################################################
@@ -65,6 +65,7 @@ import sys
 import serial
 import signal
 import pymysql
+import logging
 import argparse
 import threading
 import subprocess
@@ -72,6 +73,7 @@ import configparser
 
 from time import sleep, time_ns
 import paho.mqtt.client as mqtt_client
+from logging.handlers import RotatingFileHandler
 
 ########################### class definitions ###########################
 
@@ -80,8 +82,11 @@ class SimpleDWS7612Logger(threading.Thread):
   _OID_180 = b'\x07\x01\x00\x01\x08\x00\xff' #Positive Active Energy
   _OID_280 = b'\x07\x01\x00\x02\x08\x00\xff' #Negative Active Energy
 
-  def __init__(self, port, cycle, hostname='', username='', password='', database='', verbose=False):
+  def __init__(self, port, cycle, hostname='', username='', password='', database='', logger=None):
     threading.Thread.__init__(self)
+
+    # logger
+    self._logger = logger
 
     # counters
     self._positive = 0.0
@@ -108,24 +113,14 @@ class SimpleDWS7612Logger(threading.Thread):
       self._mysql = True
 
     # diverse
-    self._verbose = verbose
     self._running = False
     self._run = True
 
   # public functions
   def get_positive(self):
-    for x in range(10):
-      if self._running:
-        break
-      sleep(1)
-
     return self._positive
 
   def get_negative(self):
-    for x in range(10):
-      if self._running:
-        break
-      sleep(1)
     return self._negative
 
   def stop(self):
@@ -150,9 +145,9 @@ class SimpleDWS7612Logger(threading.Thread):
             cursor.execute(sql, ('30', str(ts), self._negative))
             conn.commit()
       except pymysql.Error as e:
-        print('MySQL Error: %s\n' % e)
+        self._logger.error('MySQL Error: %s\n' % e)
       except Exception as e:
-        print('%s: %s' % (type(e), str(e.args)))
+        self._logger.error('%s: %s' % (type(e), str(e.args)))
 
   def _get_int(self, buffer, offset):
     result = None
@@ -171,8 +166,7 @@ class SimpleDWS7612Logger(threading.Thread):
     return result
 
   def _read_sml_message(self, ser):
-    if self._verbose:
-      print('Reading SML message...')
+    self._logger.info('Reading SML message...')
 
     start_seq = b'\x1b\x1b\x1b\x1b\x01\x01\x01\x01'
     stop_seq  = b'\x1b\x1b\x1b\x1b\x1a'
@@ -215,10 +209,7 @@ class SimpleDWS7612Logger(threading.Thread):
         ser.close()
 
         if len(msg) and self._run:
-          if self._verbose:
-            print('Message length: %d' % len(msg))
-            #print(msg.hex())
-            print()
+          self._logger.info('Message length: %d' % len(msg))
 
           # decode positive active energy (1.8.0)
           offset = msg.find(self._OID_180)
@@ -228,8 +219,7 @@ class SimpleDWS7612Logger(threading.Thread):
             if value == None:
               value = 0
             self._positive = round((value/10000),3)
-          if self._verbose:
-            print('1.8.0: %s kWh' % str('%.3f' % (self._positive)).rjust(10))
+          self._logger.info('1.8.0: %s kWh' % str('%.3f' % (self._positive)).rjust(10))
 
           # decode negative active energy (2.8.0)
           offset = msg.find(self._OID_280)
@@ -239,20 +229,15 @@ class SimpleDWS7612Logger(threading.Thread):
             if value == None:
               value = 0
             self._negative = round((value/10000),3)
-          if self._verbose:
-            print('2.8.0: %s kWh' % str('%.3f' % (self._negative)).rjust(10))
-
-          if self._verbose:
-            print()
+          self._logger.info('2.8.0: %s kWh' % str('%.3f' % (self._negative)).rjust(10))
 
           # log the meter readings
           self._log_data()
         else:
           if self._run:
-            print('Error: reading serial port (%s)' % (self._port))
-            print()
+            self._logger.error('Error: reading serial port (%s)\n' % (self._port))
       except serial.SerialException as e:
-        print('Error: ' + str(e))
+        self._logger.error('Error: ' + str(e))
         if self._run == False:
           break
         sleep(2)
@@ -312,15 +297,14 @@ def assert_python3():
 
 def signalHandler(num, frame):
   if(num == signal.SIGINT):
-    print('\r                    \r', end='')
-    print('Interrupted by user.')
+    logger.info('\r                                                  ')
+    logger.info('Interrupted by user.')
 
   sys.exit(0)
 
 def read_cfg(nosql=False):
   cfg_file = os.path.dirname(os.path.abspath(__file__)) + '/dws7612.cfg'
-  print('Config:  %s\n' %  cfg_file)
-
+  logger.info('Config:  %s\n' %  cfg_file)
   parser = configparser.ConfigParser()
   parser.read(cfg_file)
 
@@ -362,15 +346,15 @@ def get_port(device_name):
       x = port.find(' ')
       if x:
         port = port[:x]
-  except Exception as ex:
-    print(str(ex))
+  except Exception as e:
+    logger.error(f'{type(e)}: {str(e.args)}')
 
   return port
 
 def connect_mqtt():
   def on_connect(client, userdata, flags, reason_code, properties):
     if reason_code.is_failure:
-      print("Failed to connect, return code %d\n", reason_code)
+      logger.error("Failed to connect, return code %d\n", reason_code)
     else:
       global mqtt_connected
       mqtt_connected = True
@@ -383,6 +367,7 @@ def connect_mqtt():
 
 ########################### global variables ############################
 
+logger = None
 mqttc = None
 args = None
 dws = None
@@ -399,39 +384,58 @@ def main():
   signal.signal(signal.SIGTERM, signalHandler)
 
   parser = argparse.ArgumentParser()
-  parser.add_argument('-1', '--once', action='store_true', help='Implies -v: Read the meter data just once and exit.')
-  parser.add_argument('-v', '--verbose', action='store_true', help='Display runtime-information.')
-  parser.add_argument('-d', '--debug', action='store_true', help='Display debug information.')
-  parser.add_argument('-n', '--nosql', action='store_true', help='Disable database logging.')
+  parser.add_argument('--version', action='version', version=f'%(prog)s {__version__}')
+  group = parser.add_mutually_exclusive_group()
+  group.add_argument("-e", "--error", action="store_true", help="set logging level to ERROR (default)")
+  group.add_argument("-d", "--debug", action="store_true", help="set logging level to 'DEBUG'")
+  group.add_argument("-i", "--info", action="store_true", help="set logging level to 'INFO'")
+  group.add_argument("-v", "--verbosity", type=int, choices=[0,10,20,30,40,50], help="set verbosity level", default=0)
+  parser.add_argument("-n", "--nosql", action="store_true", help="Disable database logging.")
 
   global args
   args = parser.parse_args()
 
-  if args.once:
-    args.verbose = True
+  stream_logging_level = logging.WARNING
+  if args.info:
+    stream_logging_level = logging.INFO
+  elif args.debug:
+    stream_logging_level = logging.DEBUG
+  elif args.verbosity:
+    stream_logging_level = args.verbosity
 
-  if args.debug:
-    args.verbose = True
-
-  if args.verbose:
+  if stream_logging_level < logging.WARNING:
+    print('------------------------------------------------------')
     print(f'{bcolors.BOLD}DWS7612{bcolors.ENDC} - Electrical Meter Logger - v' + __version__)
-    print('----------------------------------------------------')
-    print(__copyright__ + '\n')
+    print(__copyright__)
+    print('------------------------------------------------------')
+
+  global logger
+  logger = logging.getLogger(__name__)
+  logger.setLevel(logging.DEBUG)
+  formatter = logging.Formatter('%(asctime)s %(levelname)5s %(lineno)d %(message)s', '%Y-%m-%d %H:%M:%S')
+
+  fh = RotatingFileHandler('./dws7612.log', maxBytes=(1048576*10), backupCount=5)
+  fh.setLevel(logging.ERROR)
+  fh.setFormatter(formatter)
+  logger.addHandler(fh)
+
+  sh = logging.StreamHandler()
+  sh.setLevel(stream_logging_level)
+  sh.setFormatter(formatter)
+  logger.addHandler(sh)
 
   read_cfg(args.nosql)
   if len(cfg.dname):
     cfg.dport = get_port(cfg.dname)
 
-  if args.verbose:
-    print('Device:  ' + cfg.dport)
-    print('Cycle:   ' + str(cfg.cycle))
-    if args.nosql:
-      print(f'Logging: {bcolors.WARNING}disabled{bcolors.ENDC}\n')
-    else:
-      print(f'Logging: {bcolors.OKGREEN}enabled{bcolors.ENDC}\n')
+  logger.info('Device:  ' + cfg.dport)
+  logger.info('Cycle:   ' + str(cfg.cycle))
+  if args.nosql:
+    logger.info(f'Logging: {bcolors.WARNING}disabled{bcolors.ENDC}\n')
+  else:
+    logger.info(f'Logging: {bcolors.OKGREEN}enabled{bcolors.ENDC}\n')
 
-    print(f'Connecting to MQTT-Broker ({cfg.mqtt_broker})...', end='')
-
+  logger.info(f'Connecting to MQTT-Broker ({cfg.mqtt_broker})...')
   global mqttc
   mqttc = connect_mqtt()
   mqttc.loop_start()
@@ -439,30 +443,25 @@ def main():
     if mqtt_connected:
       break
     sleep(0.1)
-  if args.verbose:
-    if mqtt_connected:
-      print(f"{bcolors.OKGREEN}success{bcolors.ENDC}.\n")
-    else:
-      print(f"{bcolors.FAIL}failed{bcolors.ENDC}.\n")
+  if mqtt_connected:
+    logger.info(f"{bcolors.OKGREEN}success{bcolors.ENDC}.\n")
+  else:
+    logger.info(f"{bcolors.FAIL}failed{bcolors.ENDC}.\n")
 
   global dws
   if mysql_logging:
-    dws = SimpleDWS7612Logger(cfg.dport, cfg.cycle, cfg.mysql_host, cfg.mysql_user, cfg.mysql_pwd, cfg.mysql_db, args.verbose)
+    dws = SimpleDWS7612Logger(cfg.dport, cfg.cycle, cfg.mysql_host, cfg.mysql_user, cfg.mysql_pwd, cfg.mysql_db, logger)
   else:
-    dws = SimpleDWS7612Logger(cfg.dport, cfg.cycle, verbose=args.verbose)
+    dws = SimpleDWS7612Logger(cfg.dport, cfg.cycle, logger)
   dws.start()
+  sleep(2)
 
-  if args.once:
-    dws.get_positive()
-  else:
-    while True:
-      r = mqttc.publish('meter/power/consumption', str(dws.get_positive()))
-      if args.debug:
-        print(f'Bezug:       {str(r[0])} - {str(r[1])}')
-      r = mqttc.publish('meter/power/feed', str(dws.get_negative()))
-      if args.debug:
-        print(f'Einspeisung: {str(r[0])} - {str(r[1])}\n')
-      sleep(cfg.cycle + 1)
+  while True:
+    r = mqttc.publish('meter/power/consumption', str(dws.get_positive()))
+    logger.debug(f'Bezug:       {str(r[0])} - {str(r[1])}')
+    r = mqttc.publish('meter/power/feed', str(dws.get_negative()))
+    logger.debug(f'Einspeisung: {str(r[0])} - {str(r[1])}\n')
+    sleep(cfg.cycle + 1)
 
   mqttc.loop_stop()
   mqttc.disconnect()
@@ -473,21 +472,13 @@ if __name__ == '__main__':
     main()
   finally:
     if mqttc:
-      if args.verbose:
-        print("Disconnecting from MQTT-Broker...", end="")
+      logger.info("Disconnecting from MQTT-Broker...")
       mqttc.loop_stop()
       mqttc.disconnect()
-      if args.verbose:
-        print(f"{bcolors.OKGREEN}done{bcolors.ENDC}.")
 
     if dws != None:
-      if args.verbose:
-        print("Stopping SimpleDWS7612Logger...", end="")
-
+      logger.info("Stopping SimpleDWS7612Logger...")
       dws.stop()
       dws.join()
 
-      if args.verbose:
-        print(f"{bcolors.OKGREEN}done{bcolors.ENDC}.")
-
-    print('Bye.')
+    logger.info('Bye.')
