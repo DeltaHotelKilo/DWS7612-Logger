@@ -22,9 +22,11 @@
 #
 #########################################################################
 
-"""Read and decode SML messages of a DWS7612.2 electric power meter.
+"""
+   Read and decode SML messages of a DWS7612.2 electric power meter.
    Store the meter readings for positive active energy (1.8.0) and
-   negative active energy (2.8.0) in a MySQL database.
+   negative active energy (2.8.0) in a MySQL database and publish them
+   to the Home Assistant MQTT broker.
 
    Usage example:
      python3 dws7612.py [-1] [-v] [-n] [--nosql]
@@ -44,11 +46,16 @@
     * Klaus J. Mueller (https://volkszaehler.org)
       I am using the vz-software for a very long time. The database
       structure and functionalty is still based on his software.
+
+   Changes:
+    * v1.0.3: renamed the HA topics:
+	      'meter/power/consumpution' -> 'meter/power/1.8.0'
+              'meter/power/feed' -> 'meter/power/2.8.0'
 """
 
 __author__    = 'Holger Kupke'
 __copyright__ = 'Copyright (\xa9) 2024, Holger Kupke. GNU Public License 3'
-__version__   = '1.0.2'
+__version__   = '1.0.3'
 __license__   = 'GNU General Public License 3'
 
 #########################################################################
@@ -457,9 +464,9 @@ def main():
   sleep(2)
 
   while True:
-    r = mqttc.publish('meter/power/consumption', str(dws.get_positive()))
+    r = mqttc.publish('meter/power/1.8.0', str(dws.get_positive()))
     logger.debug(f'Bezug:       {str(r[0])} - {str(r[1])}')
-    r = mqttc.publish('meter/power/feed', str(dws.get_negative()))
+    r = mqttc.publish('meter/power/2.8.0', str(dws.get_negative()))
     logger.debug(f'Einspeisung: {str(r[0])} - {str(r[1])}\n')
     sleep(cfg.cycle + 1)
 
