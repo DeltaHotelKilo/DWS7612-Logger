@@ -1,5 +1,5 @@
 # ignore all .bak files
 *.bak
-
+*.log*
 
 
