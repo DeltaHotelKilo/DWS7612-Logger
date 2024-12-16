@@ -23,10 +23,10 @@
 #########################################################################
 
 """
-   Read and decode SML messages of a DWS7612.2 electric power meter.
-   Store the meter readings for positive active energy (1.8.0) and
-   negative active energy (2.8.0) in a MySQL database and publish them
-   to the Home Assistant MQTT broker.
+   This script reads and decodes SML messages of a DWS7612.2 electric
+   power meter. The meter readings for positive active energy (1.8.0)
+   and negative active energy (2.8.0) are stored in a MySQL database
+   and are also publish to the Home Assistant MQTT broker.
 
    Usage example:
      python3 dws7612.py [-1] [-v] [-n] [--nosql]
@@ -48,9 +48,7 @@
       structure and functionalty is still based on his software.
 
    Changes:
-    * v1.0.3: renamed the HA topics:
-	      'meter/power/consumpution' -> 'meter/power/1.8.0'
-              'meter/power/feed' -> 'meter/power/2.8.0'
+    * see Module-History
 """
 
 __author__    = 'Holger Kupke'
@@ -60,10 +58,13 @@ __license__   = 'GNU General Public License 3'
 
 #########################################################################
 #
-# Module-History
+# Module-History:
+#
 #  Date         Author            Reason
-#  10-Feb-2024  Holger Kupke      v1.0.0 Initial version
+#  16-Dec-2024  Holger Kupke      v1.0.3 renamed mqtt topics
+#  10-Nov-2024  Holger Kupke      v1.0.2 minor MQTT bugfixing
 #  01-Nov-2024  Holger Kupke      v1.0.1 added  MQTT publishing
+#  10-Feb-2024  Holger Kupke      v1.0.0 Initial version
 #
 #########################################################################
 
